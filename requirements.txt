@@ -1,0 +1,20 @@
+# Core data analysis
+jupyter
+pandas
+numpy
+matplotlib
+seaborn
+
+# JSON/data handling
+python-dotenv
+
+# Future LLM integration
+ollama
+openai
+
+# Future Neo4j integration  
+neo4j
+py2neo
+
+# Future evaluation
+scikit-learn
