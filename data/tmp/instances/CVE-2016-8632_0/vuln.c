@@ -1,0 +1,22 @@
+int tipc_enable_l2_media(struct net *net, struct tipc_bearer *b,
+			 struct nlattr *attr[])
+{
+	struct net_device *dev;
+	char *driver_name = strchr((const char *)b->name, ':') + 1;
+
+	/* Find device with specified name */
+	dev = dev_get_by_name(net, driver_name);
+	if (!dev)
+		return -ENODEV;
+
+	/* Associate TIPC bearer with L2 bearer */
+	rcu_assign_pointer(b->media_ptr, dev);
+	memset(&b->bcast_addr, 0, sizeof(b->bcast_addr));
+	memcpy(b->bcast_addr.value, dev->broadcast, b->media->hwaddr_len);
+	b->bcast_addr.media_id = b->media->type_id;
+	b->bcast_addr.broadcast = 1;
+	b->mtu = dev->mtu;
+	b->media->raw2addr(b, &b->addr, (char *)dev->dev_addr);
+	rcu_assign_pointer(dev->tipc_ptr, b);
+	return 0;
+}

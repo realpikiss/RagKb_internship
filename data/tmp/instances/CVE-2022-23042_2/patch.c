@@ -1,0 +1,115 @@
+static int xennet_poll(struct napi_struct *napi, int budget)
+{
+	struct netfront_queue *queue = container_of(napi, struct netfront_queue, napi);
+	struct net_device *dev = queue->info->netdev;
+	struct sk_buff *skb;
+	struct netfront_rx_info rinfo;
+	struct xen_netif_rx_response *rx = &rinfo.rx;
+	struct xen_netif_extra_info *extras = rinfo.extras;
+	RING_IDX i, rp;
+	int work_done;
+	struct sk_buff_head rxq;
+	struct sk_buff_head errq;
+	struct sk_buff_head tmpq;
+	int err;
+	bool need_xdp_flush = false;
+
+	spin_lock(&queue->rx_lock);
+
+	skb_queue_head_init(&rxq);
+	skb_queue_head_init(&errq);
+	skb_queue_head_init(&tmpq);
+
+	rp = queue->rx.sring->rsp_prod;
+	if (RING_RESPONSE_PROD_OVERFLOW(&queue->rx, rp)) {
+		dev_alert(&dev->dev, "Illegal number of responses %u\n",
+			  rp - queue->rx.rsp_cons);
+		queue->info->broken = true;
+		spin_unlock(&queue->rx_lock);
+		return 0;
+	}
+	rmb(); /* Ensure we see queued responses up to 'rp'. */
+
+	i = queue->rx.rsp_cons;
+	work_done = 0;
+	while ((i != rp) && (work_done < budget)) {
+		RING_COPY_RESPONSE(&queue->rx, i, rx);
+		memset(extras, 0, sizeof(rinfo.extras));
+
+		err = xennet_get_responses(queue, &rinfo, rp, &tmpq,
+					   &need_xdp_flush);
+
+		if (unlikely(err)) {
+			if (queue->info->broken) {
+				spin_unlock(&queue->rx_lock);
+				return 0;
+			}
+err:
+			while ((skb = __skb_dequeue(&tmpq)))
+				__skb_queue_tail(&errq, skb);
+			dev->stats.rx_errors++;
+			i = queue->rx.rsp_cons;
+			continue;
+		}
+
+		skb = __skb_dequeue(&tmpq);
+
+		if (extras[XEN_NETIF_EXTRA_TYPE_GSO - 1].type) {
+			struct xen_netif_extra_info *gso;
+			gso = &extras[XEN_NETIF_EXTRA_TYPE_GSO - 1];
+
+			if (unlikely(xennet_set_skb_gso(skb, gso))) {
+				__skb_queue_head(&tmpq, skb);
+				xennet_set_rx_rsp_cons(queue,
+						       queue->rx.rsp_cons +
+						       skb_queue_len(&tmpq));
+				goto err;
+			}
+		}
+
+		NETFRONT_SKB_CB(skb)->pull_to = rx->status;
+		if (NETFRONT_SKB_CB(skb)->pull_to > RX_COPY_THRESHOLD)
+			NETFRONT_SKB_CB(skb)->pull_to = RX_COPY_THRESHOLD;
+
+		skb_frag_off_set(&skb_shinfo(skb)->frags[0], rx->offset);
+		skb_frag_size_set(&skb_shinfo(skb)->frags[0], rx->status);
+		skb->data_len = rx->status;
+		skb->len += rx->status;
+
+		if (unlikely(xennet_fill_frags(queue, skb, &tmpq)))
+			goto err;
+
+		if (rx->flags & XEN_NETRXF_csum_blank)
+			skb->ip_summed = CHECKSUM_PARTIAL;
+		else if (rx->flags & XEN_NETRXF_data_validated)
+			skb->ip_summed = CHECKSUM_UNNECESSARY;
+
+		__skb_queue_tail(&rxq, skb);
+
+		i = queue->rx.rsp_cons + 1;
+		xennet_set_rx_rsp_cons(queue, i);
+		work_done++;
+	}
+	if (need_xdp_flush)
+		xdp_do_flush();
+
+	__skb_queue_purge(&errq);
+
+	work_done -= handle_incoming_queue(queue, &rxq);
+
+	xennet_alloc_rx_buffers(queue);
+
+	if (work_done < budget) {
+		int more_to_do = 0;
+
+		napi_complete_done(napi, work_done);
+
+		RING_FINAL_CHECK_FOR_RESPONSES(&queue->rx, more_to_do);
+		if (more_to_do)
+			napi_schedule(napi);
+	}
+
+	spin_unlock(&queue->rx_lock);
+
+	return work_done;
+}

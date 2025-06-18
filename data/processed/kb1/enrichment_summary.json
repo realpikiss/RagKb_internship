@@ -1,0 +1,49 @@
+{
+  "enrichment_date": "2025-06-13",
+  "kb2_source": "/Users/vernetemmanueladjobi/Documents/RessourcesStages/Projets/VulRAG-Hybrid-System/data/tmp/kb2_final_with_embeddings.json",
+  "total_cwe_files": 10,
+  "saved_files": [
+    "gpt-4o-mini_CWE-125_316_enriched.json",
+    "gpt-4o-mini_CWE-787_316_enriched.json",
+    "gpt-4o-mini_CWE-416_316_enriched.json",
+    "gpt-4o-mini_CWE-200_316_enriched.json",
+    "gpt-4o-mini_CWE-362_316_enriched.json",
+    "gpt-4o-mini_CWE-20_316_enriched.json",
+    "gpt-4o-mini_CWE-264_316_enriched.json",
+    "gpt-4o-mini_CWE-119_316_enriched.json",
+    "gpt-4o-mini_CWE-476_316_enriched.json",
+    "gpt-4o-mini_CWE-401_316_enriched.json"
+  ],
+  "enrichment_stats": {
+    "total_entries": 2205,
+    "enriched_entries": 2205,
+    "non_enriched_entries": 0,
+    "field_generation_stats": {
+      "vulnerability_types": {
+        "race_condition": 521,
+        "buffer_overflow": 277,
+        "injection": 153,
+        "null_pointer_dereference": 529,
+        "use_after_free": 306,
+        "privilege_escalation": 117,
+        "information_disclosure": 120,
+        "input_validation": 92,
+        "memory_leak": 90
+      },
+      "fix_strategies": {
+        "bounds_checking": 1228,
+        "input_validation": 18,
+        "resource_management": 420,
+        "synchronization": 316,
+        "null_checking": 74,
+        "other": 126,
+        "access_control": 23
+      },
+      "complexity_levels": {
+        "simple": 1563,
+        "moderate": 629,
+        "complex": 13
+      }
+    }
+  }
+}

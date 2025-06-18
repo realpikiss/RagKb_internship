@@ -1,4 +1,3 @@
-
 # VulRAG-Hybrid: Knowledge-Enhanced Vulnerability Detection & Repair
 
 🚧 **Work in Progress** - Research project in development
@@ -42,6 +41,8 @@ pip install -r requirements.txt
 * **Neo4j** (install via brew): `brew install neo4j`
 * **Ollama + Qwen 7B** : `ollama pull qwen2.5-coder:7b`
 * **Joern** (for CPG extraction): `brew install joern`
+* tmux
+* parallells
 
 ## Data Setup
 

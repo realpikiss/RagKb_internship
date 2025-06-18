@@ -1,0 +1,12 @@
+{
+  "embedding_dimensions": 128,
+  "similarity_threshold": 0.7,
+  "hybrid_weight": 0.7,
+  "top_k_default": 10,
+  "files": {
+    "embeddings_matrix": "embeddings_matrix.npy",
+    "entry_keys": "entry_keys.json",
+    "metadata_index": "metadata_index.json",
+    "full_kb2": "../kb2_final_with_embeddings.json"
+  }
+}

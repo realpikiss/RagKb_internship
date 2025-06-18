@@ -1,0 +1,57 @@
+int init_smb2_neg_rsp(struct ksmbd_work *work)
+{
+	struct smb2_hdr *rsp_hdr;
+	struct smb2_negotiate_rsp *rsp;
+	struct ksmbd_conn *conn = work->conn;
+
+	*(__be32 *)work->response_buf =
+		cpu_to_be32(conn->vals->header_size);
+
+	rsp_hdr = smb2_get_msg(work->response_buf);
+	memset(rsp_hdr, 0, sizeof(struct smb2_hdr) + 2);
+	rsp_hdr->ProtocolId = SMB2_PROTO_NUMBER;
+	rsp_hdr->StructureSize = SMB2_HEADER_STRUCTURE_SIZE;
+	rsp_hdr->CreditRequest = cpu_to_le16(2);
+	rsp_hdr->Command = SMB2_NEGOTIATE;
+	rsp_hdr->Flags = (SMB2_FLAGS_SERVER_TO_REDIR);
+	rsp_hdr->NextCommand = 0;
+	rsp_hdr->MessageId = 0;
+	rsp_hdr->Id.SyncId.ProcessId = 0;
+	rsp_hdr->Id.SyncId.TreeId = 0;
+	rsp_hdr->SessionId = 0;
+	memset(rsp_hdr->Signature, 0, 16);
+
+	rsp = smb2_get_msg(work->response_buf);
+
+	WARN_ON(ksmbd_conn_good(work));
+
+	rsp->StructureSize = cpu_to_le16(65);
+	ksmbd_debug(SMB, "conn->dialect 0x%x\n", conn->dialect);
+	rsp->DialectRevision = cpu_to_le16(conn->dialect);
+	/* Not setting conn guid rsp->ServerGUID, as it
+	 * not used by client for identifying connection
+	 */
+	rsp->Capabilities = cpu_to_le32(conn->vals->capabilities);
+	/* Default Max Message Size till SMB2.0, 64K*/
+	rsp->MaxTransactSize = cpu_to_le32(conn->vals->max_trans_size);
+	rsp->MaxReadSize = cpu_to_le32(conn->vals->max_read_size);
+	rsp->MaxWriteSize = cpu_to_le32(conn->vals->max_write_size);
+
+	rsp->SystemTime = cpu_to_le64(ksmbd_systime());
+	rsp->ServerStartTime = 0;
+
+	rsp->SecurityBufferOffset = cpu_to_le16(128);
+	rsp->SecurityBufferLength = cpu_to_le16(AUTH_GSS_LENGTH);
+	ksmbd_copy_gss_neg_header((char *)(&rsp->hdr) +
+		le16_to_cpu(rsp->SecurityBufferOffset));
+	inc_rfc1001_len(work->response_buf,
+			sizeof(struct smb2_negotiate_rsp) -
+			sizeof(struct smb2_hdr) + AUTH_GSS_LENGTH);
+	rsp->SecurityMode = SMB2_NEGOTIATE_SIGNING_ENABLED_LE;
+	if (server_conf.signing == KSMBD_CONFIG_OPT_MANDATORY)
+		rsp->SecurityMode |= SMB2_NEGOTIATE_SIGNING_REQUIRED_LE;
+	conn->use_spnego = true;
+
+	ksmbd_conn_set_need_negotiate(work);
+	return 0;
+}

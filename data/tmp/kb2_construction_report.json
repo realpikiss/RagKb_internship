@@ -1,0 +1,457 @@
+{
+  "system_info": {
+    "notebook_version": "05_kb2_construction_final",
+    "generation_date": "2025-06-13",
+    "joern_cpg_version": "GraphSON format",
+    "embedding_method": "structural_multi_feature",
+    "embedding_dimensions": 128
+  },
+  "processing_statistics": {
+    "total_entries": 4410,
+    "successful_embeddings": 4410,
+    "failed_embeddings": 0,
+    "processing_errors": [],
+    "embedding_statistics": {
+      "mean_norm": 1.0000000010198395,
+      "std_norm": 3.967230293163979e-08,
+      "zero_embeddings": 0,
+      "nan_embeddings": 0
+    },
+    "processing_time": 52.36107397079468,
+    "batch_results": [
+      {
+        "batch_idx": 0,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 1,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 2,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 3,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 4,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 5,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 6,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 7,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 8,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 9,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 10,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 11,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 12,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 13,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 14,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 15,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 16,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 17,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 18,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 19,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 20,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 21,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 22,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 23,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 24,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 25,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 26,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 27,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 28,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 29,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 30,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 31,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 32,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 33,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 34,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 35,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 36,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 37,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 38,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 39,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 40,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 41,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 42,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 43,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0
+      },
+      {
+        "batch_idx": 44,
+        "success_count": 10,
+        "error_count": 0,
+        "success_rate": 1.0
+      }
+    ]
+  },
+  "search_engine_stats": {
+    "total_embeddings": 4410,
+    "embedding_dimension": 128,
+    "norm_statistics": {
+      "mean": 1.0,
+      "std": 4.71536516499782e-08,
+      "min": 0.9999998211860657,
+      "max": 1.0000001192092896
+    },
+    "similarity_statistics": {
+      "mean_pairwise_similarity": 0.8441184759140015,
+      "std_pairwise_similarity": 0.2741927206516266,
+      "max_pairwise_similarity": 1.000000238418579,
+      "min_pairwise_similarity": 0.10797595977783203
+    }
+  },
+  "quality_analysis": {
+    "total_entries": 4410,
+    "unique_cves": 2205,
+    "complete_cves": 2205,
+    "embedding_coverage": 1.0,
+    "dangerous_calls_stats": {
+      "kfree": 1022,
+      "memcpy": 564,
+      "memset": 408,
+      "kfree_skb": 165,
+      "kmalloc": 153,
+      "strcpy": 145,
+      "kvfree": 94,
+      "sprintf": 86,
+      "skb_free_datagram": 64,
+      "kmem_cache_free": 42,
+      "kmalloc_array": 42,
+      "kcalloc": 42,
+      "usb_free_urb": 33,
+      "free_extent_map": 28,
+      "memcpy_fromio": 25,
+      "wm8350_free_irq": 25,
+      "kvmalloc": 23,
+      "free_extent_buffer": 20,
+      "free_netdev": 19,
+      "__free_page": 19
+    },
+    "complexity_stats": {
+      "mean": 7.181985787838139,
+      "std": 1.7800569011099525
+    }
+  },
+  "query_validation": {
+    "query_accuracy": [],
+    "vuln_patch_similarity": [
+      0.9999862793057852,
+      0.999995289308101,
+      1.0000000398798723,
+      0.9949560375224622,
+      0.9999275122701481
+    ],
+    "cross_cve_similarity": [],
+    "retrieval_precision": [
+      0.2,
+      0.1,
+      0.2,
+      0.2,
+      0.0
+    ],
+    "detailed_results": [
+      {
+        "cve_id": "CVE-2017-7533_0",
+        "query_graph_stats": {
+          "nodes": 124,
+          "edges": 571,
+          "dangerous_calls_count": 1
+        },
+        "search_results_count": 10,
+        "patch_rank": 5,
+        "vuln_rank": 1,
+        "same_cve_in_top10": 2,
+        "retrieval_precision": 0.2,
+        "vuln_patch_similarity": 0.9999862793057852,
+        "top_similarities": [
+          0.9297491984490034,
+          0.8435307729683069,
+          0.822432816208181
+        ]
+      },
+      {
+        "cve_id": "CVE-2021-0935_0",
+        "query_graph_stats": {
+          "nodes": 370,
+          "edges": 1639,
+          "dangerous_calls_count": 1
+        },
+        "search_results_count": 10,
+        "patch_rank": null,
+        "vuln_rank": 1,
+        "same_cve_in_top10": 1,
+        "retrieval_precision": 0.1,
+        "vuln_patch_similarity": 0.999995289308101,
+        "top_similarities": [
+          0.9218731569682872,
+          0.9180503905069324,
+          0.9176004564226636
+        ]
+      },
+      {
+        "cve_id": "CVE-2017-14156_0",
+        "query_graph_stats": {
+          "nodes": 44,
+          "edges": 125,
+          "dangerous_calls_count": 0
+        },
+        "search_results_count": 10,
+        "patch_rank": 1,
+        "vuln_rank": 2,
+        "same_cve_in_top10": 2,
+        "retrieval_precision": 0.2,
+        "vuln_patch_similarity": 1.0000000398798723,
+        "top_similarities": [
+          0.9593037354465506,
+          0.9593037354465506,
+          0.8780807492773259
+        ]
+      },
+      {
+        "cve_id": "CVE-2023-20928_3",
+        "query_graph_stats": {
+          "nodes": 28,
+          "edges": 84,
+          "dangerous_calls_count": 0
+        },
+        "search_results_count": 10,
+        "patch_rank": 8,
+        "vuln_rank": 1,
+        "same_cve_in_top10": 2,
+        "retrieval_precision": 0.2,
+        "vuln_patch_similarity": 0.9949560375224622,
+        "top_similarities": [
+          0.9587301498698659,
+          0.9032276039393154,
+          0.9012535079945225
+        ]
+      },
+      {
+        "cve_id": "CVE-2019-15221_0",
+        "query_graph_stats": {
+          "nodes": 226,
+          "edges": 980,
+          "dangerous_calls_count": 0
+        },
+        "search_results_count": 10,
+        "patch_rank": null,
+        "vuln_rank": null,
+        "same_cve_in_top10": 0,
+        "retrieval_precision": 0.0,
+        "vuln_patch_similarity": 0.9999275122701481,
+        "top_similarities": [
+          0.8866452876054634,
+          0.881537026911667,
+          0.8798434720912254
+        ]
+      }
+    ]
+  }
+}
