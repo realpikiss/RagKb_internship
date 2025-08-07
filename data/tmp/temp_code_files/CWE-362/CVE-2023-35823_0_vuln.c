@@ -1,0 +1,5 @@
+int saa7134_ts_fini(struct saa7134_dev *dev)
+{
+	saa7134_pgtable_free(dev->pci, &dev->ts_q.pt);
+	return 0;
+}

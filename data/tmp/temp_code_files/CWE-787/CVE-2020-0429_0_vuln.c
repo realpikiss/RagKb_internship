@@ -1,0 +1,13 @@
+int l2tp_session_delete(struct l2tp_session *session)
+{
+	if (session->ref)
+		(*session->ref)(session);
+	__l2tp_session_unhash(session);
+	l2tp_session_queue_purge(session);
+	if (session->session_close != NULL)
+		(*session->session_close)(session);
+	if (session->deref)
+		(*session->deref)(session);
+	l2tp_session_dec_refcount(session);
+	return 0;
+}

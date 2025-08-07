@@ -1,0 +1,605 @@
+static noinline int test_btrfs_get_extent(u32 sectorsize, u32 nodesize)
+{
+	struct btrfs_fs_info *fs_info = NULL;
+	struct inode *inode = NULL;
+	struct btrfs_root *root = NULL;
+	struct extent_map *em = NULL;
+	u64 orig_start;
+	u64 disk_bytenr;
+	u64 offset;
+	int ret = -ENOMEM;
+
+	test_msg("running btrfs_get_extent tests");
+
+	inode = btrfs_new_test_inode();
+	if (!inode) {
+		test_std_err(TEST_ALLOC_INODE);
+		return ret;
+	}
+
+	BTRFS_I(inode)->location.type = BTRFS_INODE_ITEM_KEY;
+	BTRFS_I(inode)->location.objectid = BTRFS_FIRST_FREE_OBJECTID;
+	BTRFS_I(inode)->location.offset = 0;
+
+	fs_info = btrfs_alloc_dummy_fs_info(nodesize, sectorsize);
+	if (!fs_info) {
+		test_std_err(TEST_ALLOC_FS_INFO);
+		goto out;
+	}
+
+	root = btrfs_alloc_dummy_root(fs_info);
+	if (IS_ERR(root)) {
+		test_std_err(TEST_ALLOC_ROOT);
+		goto out;
+	}
+
+	root->node = alloc_dummy_extent_buffer(fs_info, nodesize);
+	if (!root->node) {
+		test_std_err(TEST_ALLOC_ROOT);
+		goto out;
+	}
+
+	btrfs_set_header_nritems(root->node, 0);
+	btrfs_set_header_level(root->node, 0);
+	ret = -EINVAL;
+
+	/* First with no extents */
+	BTRFS_I(inode)->root = root;
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, 0, sectorsize, 0);
+	if (IS_ERR(em)) {
+		em = NULL;
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start != EXTENT_MAP_HOLE) {
+		test_err("expected a hole, got %llu", em->block_start);
+		goto out;
+	}
+	free_extent_map(em);
+	btrfs_drop_extent_cache(BTRFS_I(inode), 0, (u64)-1, 0);
+
+	/*
+	 * All of the magic numbers are based on the mapping setup in
+	 * setup_file_extents, so if you change anything there you need to
+	 * update the comment and update the expected values below.
+	 */
+	setup_file_extents(root, sectorsize);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, 0, (u64)-1, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start != EXTENT_MAP_HOLE) {
+		test_err("expected a hole, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != 0 || em->len != 5) {
+		test_err(
+		"unexpected extent wanted start 0 len 5, got start %llu len %llu",
+			em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start != EXTENT_MAP_INLINE) {
+		test_err("expected an inline, got %llu", em->block_start);
+		goto out;
+	}
+
+	if (em->start != offset || em->len != (sectorsize - 5)) {
+		test_err(
+	"unexpected extent wanted start %llu len 1, got start %llu len %llu",
+			offset, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	/*
+	 * We don't test anything else for inline since it doesn't get set
+	 * unless we have a page for it to write into.  Maybe we should change
+	 * this?
+	 */
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start != EXTENT_MAP_HOLE) {
+		test_err("expected a hole, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != 4) {
+		test_err(
+	"unexpected extent wanted start %llu len 4, got start %llu len %llu",
+			offset, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	/* Regular extent */
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize - 1) {
+		test_err(
+	"unexpected extent wanted start %llu len 4095, got start %llu len %llu",
+			offset, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	/* The next 3 are split extents */
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+		"unexpected extent start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	disk_bytenr = em->block_start;
+	orig_start = em->start;
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start != EXTENT_MAP_HOLE) {
+		test_err("expected a hole, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != 2 * sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, 2 * sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	if (em->orig_start != orig_start) {
+		test_err("wrong orig offset, want %llu, have %llu",
+			 orig_start, em->orig_start);
+		goto out;
+	}
+	disk_bytenr += (em->start - orig_start);
+	if (em->block_start != disk_bytenr) {
+		test_err("wrong block start, want %llu, have %llu",
+			 disk_bytenr, em->block_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	/* Prealloc extent */
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != prealloc_only) {
+		test_err("unexpected flags set, want %lu have %lu",
+			 prealloc_only, em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	/* The next 3 are a half written prealloc extent */
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != prealloc_only) {
+		test_err("unexpected flags set, want %lu have %lu",
+			 prealloc_only, em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	disk_bytenr = em->block_start;
+	orig_start = em->start;
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_HOLE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	if (em->orig_start != orig_start) {
+		test_err("unexpected orig offset, wanted %llu, have %llu",
+			 orig_start, em->orig_start);
+		goto out;
+	}
+	if (em->block_start != (disk_bytenr + (em->start - em->orig_start))) {
+		test_err("unexpected block start, wanted %llu, have %llu",
+			 disk_bytenr + (em->start - em->orig_start),
+			 em->block_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != 2 * sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, 2 * sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != prealloc_only) {
+		test_err("unexpected flags set, want %lu have %lu",
+			 prealloc_only, em->flags);
+		goto out;
+	}
+	if (em->orig_start != orig_start) {
+		test_err("wrong orig offset, want %llu, have %llu", orig_start,
+			 em->orig_start);
+		goto out;
+	}
+	if (em->block_start != (disk_bytenr + (em->start - em->orig_start))) {
+		test_err("unexpected block start, wanted %llu, have %llu",
+			 disk_bytenr + (em->start - em->orig_start),
+			 em->block_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	/* Now for the compressed extent */
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != 2 * sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, 2 * sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != compressed_only) {
+		test_err("unexpected flags set, want %lu have %lu",
+			 compressed_only, em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu",
+			 em->start, em->orig_start);
+		goto out;
+	}
+	if (em->compress_type != BTRFS_COMPRESS_ZLIB) {
+		test_err("unexpected compress type, wanted %d, got %d",
+			 BTRFS_COMPRESS_ZLIB, em->compress_type);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	/* Split compressed extent */
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != compressed_only) {
+		test_err("unexpected flags set, want %lu have %lu",
+			 compressed_only, em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu",
+			 em->start, em->orig_start);
+		goto out;
+	}
+	if (em->compress_type != BTRFS_COMPRESS_ZLIB) {
+		test_err("unexpected compress type, wanted %d, got %d",
+			 BTRFS_COMPRESS_ZLIB, em->compress_type);
+		goto out;
+	}
+	disk_bytenr = em->block_start;
+	orig_start = em->start;
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start != disk_bytenr) {
+		test_err("block start does not match, want %llu got %llu",
+			 disk_bytenr, em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != 2 * sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, 2 * sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != compressed_only) {
+		test_err("unexpected flags set, want %lu have %lu",
+			 compressed_only, em->flags);
+		goto out;
+	}
+	if (em->orig_start != orig_start) {
+		test_err("wrong orig offset, want %llu, have %llu",
+			 em->start, orig_start);
+		goto out;
+	}
+	if (em->compress_type != BTRFS_COMPRESS_ZLIB) {
+		test_err("unexpected compress type, wanted %d, got %d",
+			 BTRFS_COMPRESS_ZLIB, em->compress_type);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	/* A hole between regular extents but no hole extent */
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset + 6,
+			sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, SZ_4M, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start != EXTENT_MAP_HOLE) {
+		test_err("expected a hole extent, got %llu", em->block_start);
+		goto out;
+	}
+	/*
+	 * Currently we just return a length that we requested rather than the
+	 * length of the actual hole, if this changes we'll have to change this
+	 * test.
+	 */
+	if (em->start != offset || em->len != 3 * sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, 3 * sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != vacancy_only) {
+		test_err("unexpected flags set, want %lu have %lu",
+			 vacancy_only, em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	offset = em->start + em->len;
+	free_extent_map(em);
+
+	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, sectorsize, 0);
+	if (IS_ERR(em)) {
+		test_err("got an error when we shouldn't have");
+		goto out;
+	}
+	if (em->block_start >= EXTENT_MAP_LAST_BYTE) {
+		test_err("expected a real extent, got %llu", em->block_start);
+		goto out;
+	}
+	if (em->start != offset || em->len != sectorsize) {
+		test_err(
+	"unexpected extent wanted start %llu len %u, got start %llu len %llu",
+			offset, sectorsize, em->start, em->len);
+		goto out;
+	}
+	if (em->flags != 0) {
+		test_err("unexpected flags set, want 0 have %lu", em->flags);
+		goto out;
+	}
+	if (em->orig_start != em->start) {
+		test_err("wrong orig offset, want %llu, have %llu", em->start,
+			 em->orig_start);
+		goto out;
+	}
+	ret = 0;
+out:
+	if (!IS_ERR(em))
+		free_extent_map(em);
+	iput(inode);
+	btrfs_free_dummy_root(root);
+	btrfs_free_dummy_fs_info(fs_info);
+	return ret;
+}

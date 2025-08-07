@@ -1,0 +1,188 @@
+static int xillyusb_open(struct inode *inode, struct file *filp)
+{
+	struct xillyusb_dev *xdev;
+	struct xillyusb_channel *chan;
+	struct xillyfifo *in_fifo = NULL;
+	struct xillyusb_endpoint *out_ep = NULL;
+	int rc;
+	int index;
+
+	rc = xillybus_find_inode(inode, (void **)&xdev, &index);
+	if (rc)
+		return rc;
+
+	chan = &xdev->channels[index];
+	filp->private_data = chan;
+
+	mutex_lock(&chan->lock);
+
+	rc = -ENODEV;
+
+	if (xdev->error)
+		goto unmutex_fail;
+
+	if (((filp->f_mode & FMODE_READ) && !chan->readable) ||
+	    ((filp->f_mode & FMODE_WRITE) && !chan->writable))
+		goto unmutex_fail;
+
+	if ((filp->f_flags & O_NONBLOCK) && (filp->f_mode & FMODE_READ) &&
+	    chan->in_synchronous) {
+		dev_err(xdev->dev,
+			"open() failed: O_NONBLOCK not allowed for read on this device\n");
+		goto unmutex_fail;
+	}
+
+	if ((filp->f_flags & O_NONBLOCK) && (filp->f_mode & FMODE_WRITE) &&
+	    chan->out_synchronous) {
+		dev_err(xdev->dev,
+			"open() failed: O_NONBLOCK not allowed for write on this device\n");
+		goto unmutex_fail;
+	}
+
+	rc = -EBUSY;
+
+	if (((filp->f_mode & FMODE_READ) && chan->open_for_read) ||
+	    ((filp->f_mode & FMODE_WRITE) && chan->open_for_write))
+		goto unmutex_fail;
+
+	kref_get(&xdev->kref);
+
+	if (filp->f_mode & FMODE_READ)
+		chan->open_for_read = 1;
+
+	if (filp->f_mode & FMODE_WRITE)
+		chan->open_for_write = 1;
+
+	mutex_unlock(&chan->lock);
+
+	if (filp->f_mode & FMODE_WRITE) {
+		out_ep = endpoint_alloc(xdev,
+					(chan->chan_idx + 2) | USB_DIR_OUT,
+					bulk_out_work, BUF_SIZE_ORDER, BUFNUM);
+
+		if (!out_ep) {
+			rc = -ENOMEM;
+			goto unopen;
+		}
+
+		rc = fifo_init(&out_ep->fifo, chan->out_log2_fifo_size);
+
+		if (rc)
+			goto late_unopen;
+
+		out_ep->fill_mask = -(1 << chan->out_log2_element_size);
+		chan->out_bytes = 0;
+		chan->flushed = 0;
+
+		/*
+		 * Sending a flush request to a previously closed stream
+		 * effectively opens it, and also waits until the command is
+		 * confirmed by the FPGA. The latter is necessary because the
+		 * data is sent through a separate BULK OUT endpoint, and the
+		 * xHCI controller is free to reorder transmissions.
+		 *
+		 * This can't go wrong unless there's a serious hardware error
+		 * (or the computer is stuck for 500 ms?)
+		 */
+		rc = flush_downstream(chan, XILLY_RESPONSE_TIMEOUT, false);
+
+		if (rc == -ETIMEDOUT) {
+			rc = -EIO;
+			report_io_error(xdev, rc);
+		}
+
+		if (rc)
+			goto late_unopen;
+	}
+
+	if (filp->f_mode & FMODE_READ) {
+		in_fifo = kzalloc(sizeof(*in_fifo), GFP_KERNEL);
+
+		if (!in_fifo) {
+			rc = -ENOMEM;
+			goto late_unopen;
+		}
+
+		rc = fifo_init(in_fifo, chan->in_log2_fifo_size);
+
+		if (rc) {
+			kfree(in_fifo);
+			goto late_unopen;
+		}
+	}
+
+	mutex_lock(&chan->lock);
+	if (in_fifo) {
+		chan->in_fifo = in_fifo;
+		chan->read_data_ok = 1;
+	}
+	if (out_ep)
+		chan->out_ep = out_ep;
+	mutex_unlock(&chan->lock);
+
+	if (in_fifo) {
+		u32 in_checkpoint = 0;
+
+		if (!chan->in_synchronous)
+			in_checkpoint = in_fifo->size >>
+				chan->in_log2_element_size;
+
+		chan->in_consumed_bytes = 0;
+		chan->poll_used = 0;
+		chan->in_current_checkpoint = in_checkpoint;
+		rc = xillyusb_send_opcode(xdev, (chan->chan_idx << 1) | 1,
+					  OPCODE_SET_CHECKPOINT,
+					  in_checkpoint);
+
+		if (rc) /* Failure guarantees that opcode wasn't sent */
+			goto unfifo;
+
+		/*
+		 * In non-blocking mode, request the FPGA to send any data it
+		 * has right away. Otherwise, the first read() will always
+		 * return -EAGAIN, which is OK strictly speaking, but ugly.
+		 * Checking and unrolling if this fails isn't worth the
+		 * effort -- the error is propagated to the first read()
+		 * anyhow.
+		 */
+		if (filp->f_flags & O_NONBLOCK)
+			request_read_anything(chan, OPCODE_SET_PUSH);
+	}
+
+	return 0;
+
+unfifo:
+	chan->read_data_ok = 0;
+	safely_assign_in_fifo(chan, NULL);
+	fifo_mem_release(in_fifo);
+	kfree(in_fifo);
+
+	if (out_ep) {
+		mutex_lock(&chan->lock);
+		chan->out_ep = NULL;
+		mutex_unlock(&chan->lock);
+	}
+
+late_unopen:
+	if (out_ep)
+		endpoint_dealloc(out_ep);
+
+unopen:
+	mutex_lock(&chan->lock);
+
+	if (filp->f_mode & FMODE_READ)
+		chan->open_for_read = 0;
+
+	if (filp->f_mode & FMODE_WRITE)
+		chan->open_for_write = 0;
+
+	mutex_unlock(&chan->lock);
+
+	kref_put(&xdev->kref, cleanup_dev);
+
+	return rc;
+
+unmutex_fail:
+	mutex_unlock(&chan->lock);
+	return rc;
+}

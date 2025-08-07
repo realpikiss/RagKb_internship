@@ -1,0 +1,25 @@
+static bool io_match_task(struct io_kiocb *head,
+			  struct task_struct *task,
+			  struct files_struct *files)
+{
+	struct io_kiocb *req;
+
+	if (task && head->task != task) {
+		/* in terms of cancelation, always match if req task is dead */
+		if (head->task->flags & PF_EXITING)
+			return true;
+		return false;
+	}
+	if (!files)
+		return true;
+
+	io_for_each_link(req, head) {
+		if (!(req->flags & REQ_F_WORK_INITIALIZED))
+			continue;
+		if (req->file && req->file->f_op == &io_uring_fops)
+			return true;
+		if (req->work.identity->files == files)
+			return true;
+	}
+	return false;
+}
