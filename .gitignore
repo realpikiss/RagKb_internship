@@ -1,0 +1,50 @@
+# Data directories
+data/
+datasets/
+*.data
+logs/
+
+# Exclude data files
+*.csv
+*.json
+*.txt
+*.xml
+*.db
+*.sqlite
+*.parquet
+
+# Model files
+*.pkl
+*.joblib
+*.h5
+*.pth
+*.pt
+*.onnx
+
+# Logs and outputs
+logs/
+outputs/
+results/
+checkpoints/
+
+# Environment and config
+.env
+config.yaml
+config.json
+
+# Cache
+__pycache__/
+.cache/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
