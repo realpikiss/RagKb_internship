@@ -1,0 +1,4 @@
+static void ksmbd_conn_lock(struct ksmbd_conn *conn)
+{
+	mutex_lock(&conn->srv_mutex);
+}

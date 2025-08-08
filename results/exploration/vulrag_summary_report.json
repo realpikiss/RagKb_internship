@@ -1,0 +1,120 @@
+{
+  "analysis_metadata": {
+    "analysis_date": "2025-08-08T17:06:54.999516",
+    "total_cwe_categories": 10,
+    "unique_cves": 1154,
+    "total_cwe_cve_pairs": 1217,
+    "total_instances": 2317,
+    "cross_cwe_count": 60
+  },
+  "cwe_breakdown": {
+    "CWE-119": {
+      "cve_count": 111,
+      "instance_count": 173,
+      "avg_instances_per_cve": 1.56,
+      "file": "gpt-4o-mini_CWE-119_316.json"
+    },
+    "CWE-125": {
+      "cve_count": 89,
+      "instance_count": 140,
+      "avg_instances_per_cve": 1.57,
+      "file": "gpt-4o-mini_CWE-125_316.json"
+    },
+    "CWE-200": {
+      "cve_count": 92,
+      "instance_count": 153,
+      "avg_instances_per_cve": 1.66,
+      "file": "gpt-4o-mini_CWE-200_316.json"
+    },
+    "CWE-20": {
+      "cve_count": 79,
+      "instance_count": 182,
+      "avg_instances_per_cve": 2.3,
+      "file": "gpt-4o-mini_CWE-20_316.json"
+    },
+    "CWE-264": {
+      "cve_count": 41,
+      "instance_count": 120,
+      "avg_instances_per_cve": 2.93,
+      "file": "gpt-4o-mini_CWE-264_316.json"
+    },
+    "CWE-362": {
+      "cve_count": 159,
+      "instance_count": 320,
+      "avg_instances_per_cve": 2.01,
+      "file": "gpt-4o-mini_CWE-362_316.json"
+    },
+    "CWE-401": {
+      "cve_count": 76,
+      "instance_count": 101,
+      "avg_instances_per_cve": 1.33,
+      "file": "gpt-4o-mini_CWE-401_316.json"
+    },
+    "CWE-416": {
+      "cve_count": 300,
+      "instance_count": 660,
+      "avg_instances_per_cve": 2.2,
+      "file": "gpt-4o-mini_CWE-416_316.json"
+    },
+    "CWE-476": {
+      "cve_count": 163,
+      "instance_count": 281,
+      "avg_instances_per_cve": 1.72,
+      "file": "gpt-4o-mini_CWE-476_316.json"
+    },
+    "CWE-787": {
+      "cve_count": 107,
+      "instance_count": 187,
+      "avg_instances_per_cve": 1.75,
+      "file": "gpt-4o-mini_CWE-787_316.json"
+    }
+  },
+  "top_cves_by_instances": {
+    "CVE-2013-7266": {
+      "instances": 37,
+      "cwe": "CWE-20"
+    },
+    "CVE-2016-3841": {
+      "instances": 37,
+      "cwe": "CWE-264"
+    },
+    "CVE-2012-3552": {
+      "instances": 23,
+      "cwe": "CWE-362"
+    },
+    "CVE-2020-36694": {
+      "instances": 19,
+      "cwe": "CWE-416"
+    },
+    "CVE-2023-5633": {
+      "instances": 19,
+      "cwe": "CWE-416"
+    },
+    "CVE-2021-20194": {
+      "instances": 18,
+      "cwe": "CWE-20"
+    },
+    "CVE-2022-23222": {
+      "instances": 18,
+      "cwe": "CWE-476"
+    },
+    "CVE-2018-3665": {
+      "instances": 17,
+      "cwe": "CWE-200"
+    },
+    "CVE-2014-0181": {
+      "instances": 16,
+      "cwe": "CWE-264"
+    },
+    "CVE-2022-3523": {
+      "instances": 16,
+      "cwe": "CWE-416"
+    }
+  },
+  "statistics": {
+    "avg_instances_per_cve": 2.01,
+    "min_instances": 1,
+    "max_instances": 37,
+    "cves_with_multiple_instances": 421
+  }
+}

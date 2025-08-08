@@ -1,0 +1,174 @@
+{
+  "cwe_patterns": {
+    "CWE-416": {
+      "description": "Use After Free",
+      "risk_weight": 0.9,
+      "patterns": {
+        "free_after_use": [
+          "kfree\\s*\\(\\s*([^)]+)\\s*\\)",
+          "free\\s*\\(\\s*([^)]+)\\s*\\)",
+          "devm_kfree\\s*\\(\\s*([^)]+)\\s*\\)"
+        ],
+        "use_after_free_indicators": [
+          "if\\s*\\(\\s*([^)]+)\\s*\\)\\s*{[^}]*kfree\\s*\\(\\s*\\1\\s*\\)[^}]*}\\s*([^;]+)\\1",
+          "kfree\\s*\\(\\s*([^)]+)\\s*\\)[^;]*;\\s*([^;]+)\\1"
+        ]
+      }
+    },
+    "CWE-476": {
+      "description": "NULL Pointer Dereference",
+      "risk_weight": 0.8,
+      "patterns": {
+        "null_checks": [
+          "if\\s*\\(\\s*([^)]+)\\s*==\\s*NULL\\s*\\)",
+          "if\\s*\\(\\s*!([^)]+)\\s*\\)",
+          "if\\s*\\(\\s*([^)]+)\\s*\\)\\s*{[^}]*return\\s*-?ENOMEM"
+        ],
+        "dereference_after_null": [
+          "([^)]+)\\s*=\\s*([^;]+);\\s*([^;]+)\\1->",
+          "([^)]+)\\s*=\\s*([^;]+);\\s*([^;]+)\\1\\."
+        ]
+      }
+    },
+    "CWE-362": {
+      "description": "Race Condition",
+      "risk_weight": 0.7,
+      "patterns": {
+        "locking_patterns": [
+          "mutex_lock\\s*\\(\\s*([^)]+)\\s*\\)",
+          "spin_lock\\s*\\(\\s*([^)]+)\\s*\\)",
+          "rtnl_lock\\s*\\(\\s*\\)",
+          "rcu_read_lock\\s*\\(\\s*\\)"
+        ],
+        "unlocking_patterns": [
+          "mutex_unlock\\s*\\(\\s*([^)]+)\\s*\\)",
+          "spin_unlock\\s*\\(\\s*([^)]+)\\s*\\)",
+          "rtnl_unlock\\s*\\(\\s*\\)",
+          "rcu_read_unlock\\s*\\(\\s*\\)"
+        ]
+      }
+    },
+    "CWE-119/787": {
+      "description": "Buffer Overflow/Out-of-bounds Write",
+      "risk_weight": 0.9,
+      "patterns": {
+        "buffer_operations": [
+          "copy_from_user\\s*\\(\\s*([^,]+),\\s*([^,]+),\\s*([^)]+)\\s*\\)",
+          "copy_to_user\\s*\\(\\s*([^,]+),\\s*([^,]+),\\s*([^)]+)\\s*\\)",
+          "memcpy\\s*\\(\\s*([^,]+),\\s*([^,]+),\\s*([^)]+)\\s*\\)",
+          "strcpy\\s*\\(\\s*([^,]+),\\s*([^)]+)\\s*\\)",
+          "strncpy\\s*\\(\\s*([^,]+),\\s*([^,]+),\\s*([^)]+)\\s*\\)"
+        ],
+        "size_checks": [
+          "if\\s*\\(\\s*([^)]+)\\s*>\\s*([^)]+)\\s*\\)",
+          "if\\s*\\(\\s*([^)]+)\\s*<\\s*([^)]+)\\s*\\)",
+          "sizeof\\s*\\(\\s*([^)]+)\\s*\\)"
+        ]
+      }
+    },
+    "CWE-20": {
+      "description": "Input Validation",
+      "risk_weight": 0.6,
+      "patterns": {
+        "validation_checks": [
+          "if\\s*\\(\\s*([^)]+)\\s*==\\s*NULL\\s*\\)",
+          "if\\s*\\(\\s*([^)]+)\\s*<=\\s*0\\s*\\)",
+          "if\\s*\\(\\s*([^)]+)\\s*>\\s*([^)]+)\\s*\\)",
+          "validate_user_input\\s*\\(\\s*([^)]+)\\s*\\)",
+          "check_user_input\\s*\\(\\s*([^)]+)\\s*\\)"
+        ]
+      }
+    },
+    "CWE-200": {
+      "description": "Information Exposure",
+      "risk_weight": 0.4,
+      "patterns": {
+        "info_exposure": [
+          "printk\\s*\\(\\s*([^)]+)\\s*\\)",
+          "dev_info\\s*\\(\\s*([^)]+)\\s*\\)",
+          "dev_err\\s*\\(\\s*([^)]+)\\s*\\)",
+          "pr_info\\s*\\(\\s*([^)]+)\\s*\\)",
+          "pr_err\\s*\\(\\s*([^)]+)\\s*\\)"
+        ]
+      }
+    },
+    "CWE-125": {
+      "description": "Out-of-bounds Read",
+      "risk_weight": 0.7,
+      "patterns": {
+        "read_operations": [
+          "copy_from_user\\s*\\(\\s*([^,]+),\\s*([^,]+),\\s*([^)]+)\\s*\\)",
+          "get_user\\s*\\(\\s*([^,]+),\\s*([^)]+)\\s*\\)",
+          "read\\s*\\(\\s*([^,]+),\\s*([^,]+),\\s*([^)]+)\\s*\\)"
+        ]
+      }
+    },
+    "CWE-264": {
+      "description": "Access Control",
+      "risk_weight": 0.5,
+      "patterns": {
+        "access_control": [
+          "capable\\s*\\(\\s*([^)]+)\\s*\\)",
+          "current_user_ns\\s*\\(\\s*\\)",
+          "ns_capable\\s*\\(\\s*([^)]+)\\s*\\)",
+          "permission\\s*\\(\\s*([^)]+)\\s*\\)"
+        ]
+      }
+    },
+    "CWE-401": {
+      "description": "Memory Leak",
+      "risk_weight": 0.6,
+      "patterns": {
+        "memory_allocation": [
+          "kmalloc\\s*\\(\\s*([^)]+)\\s*\\)",
+          "vmalloc\\s*\\(\\s*([^)]+)\\s*\\)",
+          "kzalloc\\s*\\(\\s*([^)]+)\\s*\\)",
+          "devm_kmalloc\\s*\\(\\s*([^)]+)\\s*\\)"
+        ],
+        "memory_cleanup": [
+          "kfree\\s*\\(\\s*([^)]+)\\s*\\)",
+          "vfree\\s*\\(\\s*([^)]+)\\s*\\)",
+          "devm_kfree\\s*\\(\\s*([^)]+)\\s*\\)"
+        ]
+      }
+    }
+  },
+  "dataset_statistics": {
+    "total_pairs": 2903,
+    "training_pairs": 2317,
+    "test_pairs": 586,
+    "cwe_distribution": {
+      "CWE-416": {"pairs": 660, "percentage": 22.7},
+      "CWE-476": {"pairs": 281, "percentage": 9.7},
+      "CWE-362": {"pairs": 320, "percentage": 11.0},
+      "CWE-119": {"pairs": 173, "percentage": 6.0},
+      "CWE-787": {"pairs": 187, "percentage": 6.4},
+      "CWE-20": {"pairs": 182, "percentage": 6.3},
+      "CWE-200": {"pairs": 152, "percentage": 5.2},
+      "CWE-125": {"pairs": 140, "percentage": 4.8},
+      "CWE-264": {"pairs": 120, "percentage": 4.1},
+      "CWE-401": {"pairs": 101, "percentage": 3.5}
+    }
+  },
+  "feature_extraction": {
+    "magic_numbers": {
+      "max_top_calls": 20,
+      "max_top_identifiers": 15,
+      "max_field_identifiers": 10,
+      "dangerous_call_weight": 3,
+      "risk_threshold": 0.5,
+      "entropy_normalization": 10.0
+    },
+    "structural_weights": {
+      "graph_metrics": 0.3,
+      "complexity_metrics": 0.4,
+      "control_flow_patterns": 0.3
+    },
+    "semantic_weights": {
+      "function_calls": 0.4,
+      "api_patterns": 0.3,
+      "call_diversity": 0.2,
+      "cwe_patterns": 0.1
+    }
+  }
+} 

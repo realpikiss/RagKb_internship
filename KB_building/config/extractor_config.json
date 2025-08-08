@@ -1,0 +1,61 @@
+{
+  "version": "2.1",
+  "last_updated": "2025-08-07",
+  "description": "Configuration for semantic pattern extraction; only 'dangerous_functions' is consumed by the extractor.",
+  "provenance": {
+    "source": "CWE/CERT advisories; Linux kernel coding guidelines; academic literature",
+    "notes": "Curated for C/C++ (kernel focus). Each category groups functions with similar risk modes."
+  },
+  "dangerous_functions": {
+    "buffer_overflow_prone": [
+      "strcpy", "strcat", "sprintf", "vsprintf", "gets", "scanf",
+      "strncpy", "strncat", "snprintf", "vsnprintf", "sscanf", "fscanf"
+    ],
+    "memory_management": [
+      "malloc", "calloc", "realloc", "free", "kmalloc", "kfree",
+      "vmalloc", "vfree", "kzalloc", "devm_kmalloc", "devm_kfree",
+      "kzfree", "kvmalloc", "kvfree", "alloca"
+    ],
+    "copy_operations": [
+      "memcpy", "memset", "memmove", "copy_from_user", "copy_to_user",
+      "get_user", "put_user", "__copy_from_user", "__copy_to_user",
+      "strscpy", "strlcpy", "strlcat"
+    ],
+    "command_execution": [
+      "system", "popen", "execl", "execle", "execlp", "execv", "execve", "execvp",
+      "do_execve", "do_execveat"
+    ],
+    "file_operations": [
+      "fopen", "open", "creat", "mktemp", "tmpnam", "tempnam",
+      "filp_open", "vfs_read", "vfs_write", "kernel_read", "kernel_write"
+    ],
+    "format_string": [
+      "printf", "fprintf", "dprintf", "syslog", "printk", "pr_info", "pr_err",
+      "dev_info", "dev_err", "dev_warn", "WARN", "BUG"
+    ],
+    "synchronization": [
+      "mutex_lock", "mutex_unlock", "spin_lock", "spin_unlock",
+      "spin_lock_irq", "spin_unlock_irq", "rcu_read_lock", "rcu_read_unlock",
+      "raw_spin_lock", "raw_spin_unlock", "read_lock", "write_lock"
+    ],
+    "security_capabilities": [
+      "capable", "ns_capable", "current_user_ns", "permission",
+      "security_task_kill", "may_open", "inode_permission"
+    ],
+    "signal_handling": [
+      "signal", "sigaction", "kill", "raise", "send_sig", "force_sig"
+    ],
+    "network_operations": [
+      "accept", "bind", "connect", "listen", "recv", "send",
+      "recvfrom", "sendto", "sock_create", "kernel_accept"
+    ],
+    "process_thread": [
+      "fork", "vfork", "clone", "do_fork", "kernel_thread",
+      "kthread_create", "kthread_run", "kthread_stop"
+    ],
+    "atomic_operations": [
+      "atomic_read", "atomic_set", "atomic_add", "atomic_sub",
+      "atomic_inc", "atomic_dec", "test_and_set_bit"
+    ]
+  }
+}

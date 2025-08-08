@@ -1,0 +1,53 @@
+{
+  "total_entries": 2317,
+  "cwe_distribution": {
+    "CWE-119": 173,
+    "CWE-125": 140,
+    "CWE-200": 153,
+    "CWE-20": 182,
+    "CWE-264": 120,
+    "CWE-362": 320,
+    "CWE-401": 101,
+    "CWE-416": 660,
+    "CWE-476": 281,
+    "CWE-787": 187
+  },
+  "top_cves": {
+    "CVE-2013-7266": 37,
+    "CVE-2016-3841": 37,
+    "CVE-2012-3552": 23,
+    "CVE-2020-36694": 19,
+    "CVE-2023-5633": 19,
+    "CVE-2021-20194": 18,
+    "CVE-2022-23222": 18,
+    "CVE-2018-3665": 17,
+    "CVE-2014-0181": 16,
+    "CVE-2022-3523": 16
+  },
+  "field_completeness": {
+    "cwe_id": 100.0,
+    "cve_id": 100.0,
+    "instance_id": 100.0,
+    "vuln_line_count": 100.0,
+    "patch_line_count": 100.0,
+    "vulnerability_type": 100.0,
+    "trigger_condition": 100.0,
+    "solution": 100.0,
+    "gpt_purpose": 100.0,
+    "modified_lines": 100.0,
+    "GPT_analysis": 100.0,
+    "GPT_purpose": 100.0,
+    "GPT_function": 100.0,
+    "CVE_id": 100.0,
+    "code_before_change": 100.0,
+    "code_after_change": 100.0,
+    "preconditions_for_vulnerability": 100.0,
+    "specific_code_behavior_causing_vulnerability": 100.0
+  },
+  "line_statistics": {
+    "avg_vuln_lines": 68.49244712990937,
+    "avg_patch_lines": 69.95684074233924,
+    "max_vuln_lines": 1479,
+    "max_patch_lines": 1481
+  }
+}

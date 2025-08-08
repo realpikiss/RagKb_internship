@@ -1,0 +1,153 @@
+sample_id,correct,true_label,predicted_vuln,confidence,retrieval_classification,tp,fp,tn,fn,vulnerability_type,cwe_prediction,explanation,risk_level,recommended_fix,evidence_for,evidence_against,similar_patterns,limitations,best_vuln_score,best_patch_score,search_time_seconds,total_vuln_patterns,total_patch_patterns,code_snippet
+678,False,1,False,0.85,NEUTRAL,False,False,False,True,,,"The target code handles floating-point unit (FPU) exceptions in a Linux kernel context. It includes mechanisms for notifying the system of a trap, checking user mode, saving FPU state, and sending signals to the task. The code appears to handle exceptions appropriately by checking user mode, saving the FPU state, and using signal handling to manage exceptions. The presence of functions like `notify_die`, `conditional_sti`, and `force_sig_info` indicates that the code is designed to handle exceptions robustly. There is no direct evidence of vulnerabilities such as buffer overflows, race conditions, or improper memory handling in the provided code.",LOW,,[],"['The code uses `notify_die` to handle trap notifications, which is a standard mechanism in the Linux kernel for handling exceptions.', 'The function `fpu__save` is called to save the FPU state, indicating proper state management.', 'The code checks if the execution is in user mode with `user_mode(regs)`, which is a critical check for handling exceptions correctly.', 'The use of `force_sig_info` to send signals ensures that the task is notified of the exception in a controlled manner.']","['The code structure is similar to other kernel exception handling routines, which typically involve checking execution context, saving state, and notifying tasks of exceptions.']","['The analysis is based on the provided code snippet and does not account for potential vulnerabilities in other parts of the system.', 'The retrieval context provided similarity scores but did not offer direct evidence of vulnerabilities specific to this code.']",0.7838190028226166,0.8117835709485399,16.53727102279663,10,10,"static void math_error(struct pt_regs *regs, int error_code, int trapnr)
+{
+	struct task_struct *task = current;
+	struct fpu *fpu = &task->thread.fpu;
+	siginfo_t info;
+	char *str = (trapnr == X86_TRAP_MF) ? ""fpu exception"" :
+						""simd exception"";
+
+	if (notify_die(DIE_TRAP, str, regs, error_code, trapnr, SIGFPE) == NOTIFY_STOP)
+		return;
+	conditional_sti(regs);
+
+	if (!user_mode(regs)) {
+		if (!fixup_exception(regs)) {
+			task->thread.error_code = error_code;
+			task->thread.trap_nr = trapnr;
+			..."
+930,False,1,False,0.7,NEUTRAL,False,False,False,True,,,"The code in question appears to handle SCTP (Stream Control Transmission Protocol) association establishment and management. It includes checks for valid chunk lengths, proper state transitions, and error handling for memory allocation failures. The code does not exhibit direct evidence of common vulnerabilities such as buffer overflows, use-after-free, or race conditions. The presence of error handling and state management indicates a level of robustness against typical security issues.",LOW,,"['The function checks for valid chunk lengths with `sctp_chunk_length_valid`.', 'Error handling is present for memory allocation failures, e.g., `goto nomem`.', 'State transitions are managed with commands like `SCTP_CMD_NEW_STATE`.']","['The function includes comprehensive error handling and state management.', 'There are no direct indications of unsafe memory operations or race conditions.']","['CVE-2019-8956: Use-after-free due to list iteration without safe handling.', 'CVE-2022-2602: Use-after-free in io_uring due to improper buffer management.']","['The analysis is based on the provided code snippet and context.', 'No dynamic analysis or runtime behavior was evaluated.', 'The similarity scores provided do not directly correlate to specific vulnerabilities in this code.']",0.8273582645038057,0.8244397427073201,14.526792049407959,10,10,"sctp_disposition_t sctp_sf_do_5_1D_ce(struct net *net,
+				      const struct sctp_endpoint *ep,
+				      const struct sctp_association *asoc,
+				      const sctp_subtype_t type, void *arg,
+				      sctp_cmd_seq_t *commands)
+{
+	struct sctp_chunk *chunk = arg;
+	struct sctp_association *new_asoc;
+	sctp_init_chunk_t *peer_init;
+	struct sctp_chunk *repl;
+	struct sctp_ulpevent *ev, *ai_ev = NULL;
+	int error = 0;
+	struct sctp_chunk *err_chk_p;
+	struct sock *sk;
+
+	/* If the packet is an OOTB packet ..."
+58,False,0,True,0.75,NEUTRAL,False,True,False,False,Race Condition,CWE-362,"The function `i915_gem_userptr_get_pages` involves operations on user pointers and memory management that could lead to race conditions. The code attempts to pin user pages and manage them with potential concurrent access, especially when interacting with the `mmu_notifier`. The presence of conditions where `pinned` is checked and the use of `__get_user_pages_fast` without adequate synchronization mechanisms suggest a risk of race conditions, particularly in a multi-threaded environment.",HIGH,Implement proper locking mechanisms to ensure that memory operations are synchronized across threads. Consider using mutexes or other synchronization primitives to protect critical sections where user pages are accessed or modified.,"['The use of `__get_user_pages_fast` with potentially concurrent access to user memory can lead to race conditions.', 'The function relies on `mmu_notifier` to handle changes in memory mappings, which can be complex and error-prone in multi-threaded scenarios.', 'The code comments acknowledge the risk of userspace engineering changes to pages between binding and rendering, indicating awareness of potential synchronization issues.']","['The function includes checks for `pinned` and uses `ERR_PTR` to handle errors, suggesting some level of error handling.', 'The use of `kvfree` and `release_pages` indicates attempts to manage resources properly, reducing the risk of memory leaks.']","['CVE-2023-1382: Race condition due to improper initialization and concurrent access.', 'CVE-2023-3389: Use-after-free due to improper synchronization between asynchronous events.']","['The analysis is based on the provided code snippet and may not account for other parts of the codebase that could influence behavior.', 'The retrieval context provides high similarity scores but lacks differential analysis, which limits the ability to compare vulnerable and patched versions directly.']",0.8706881429222283,0.869758174938296,15.782932996749878,10,10,"static int i915_gem_userptr_get_pages(struct drm_i915_gem_object *obj)
+{
+	const unsigned long num_pages = obj->base.size >> PAGE_SHIFT;
+	struct mm_struct *mm = obj->userptr.mm->mm;
+	struct page **pvec;
+	struct sg_table *pages;
+	bool active;
+	int pinned;
+
+	/* If userspace should engineer that these pages are replaced in
+	 * the vma between us binding this page into the GTT and completion
+	 * of rendering... Their loss. If they change the mapping of their
+	 * pages they need to create a new bo to ..."
+240,False,0,True,0.75,NEUTRAL,False,True,False,False,Use-After-Free,CWE-416,"The code in question involves memory allocation and reference counting, which are common areas for use-after-free vulnerabilities. The function `hfi1_file_open` allocates memory for `fd` and assigns it to `fp->private_data`. If memory allocation fails or `init_srcu_struct` fails, the code jumps to the `nomem` label, where `fd` is freed. However, there is a potential race condition if another thread accesses `fp->private_data` before it is set to NULL, leading to a use-after-free scenario. The evidence from similar CVEs suggests that improper handling of concurrent operations and memory management can lead to such vulnerabilities.",MEDIUM,Implement proper locking mechanisms around the assignment and deallocation of `fp->private_data` to prevent concurrent access issues.,"['The function allocates memory for `fd` and assigns it to `fp->private_data`, but if allocation fails, it frees `fd` and sets `fp->private_data` to NULL. This sequence can lead to a use-after-free if `fp->private_data` is accessed concurrently.', 'The use of `atomic_inc_not_zero` suggests concurrent access, which can lead to race conditions if not properly synchronized.']","['The function uses `kzalloc`, which initializes memory to zero, reducing the risk of using uninitialized memory.', 'Locks are initialized for `fd`, which indicates an intention to manage concurrent access, although they are not used in this function.']","['CVE-2023-3389: Insufficient handling of concurrent cancellation requests leading to use-after-free.', 'CVE-2022-3424: Improper management of context references during state changes leading to use-after-free.']","['The analysis is based on the provided code snippet and may not account for other parts of the codebase that could affect the vulnerability.', 'The absence of the full context of how `fp->private_data` is used elsewhere limits the ability to fully assess the impact.']",0.8016225687544256,0.8174342305721355,14.96213984489441,10,10,"static int hfi1_file_open(struct inode *inode, struct file *fp)
+{
+	struct hfi1_filedata *fd;
+	struct hfi1_devdata *dd = container_of(inode->i_cdev,
+					       struct hfi1_devdata,
+					       user_cdev);
+
+	if (!((dd->flags & HFI1_PRESENT) && dd->kregbase1))
+		return -EINVAL;
+
+	if (!atomic_inc_not_zero(&dd->user_refcount))
+		return -ENXIO;
+
+	/* The real work is performed later in assign_ctxt() */
+
+	fd = kzalloc(sizeof(*fd), GFP_KERNEL);
+
+	if (!fd || init_srcu_struct(&fd->pq_srcu))
+		goto nomem;
+..."
+1039,False,0,True,0.8,NEUTRAL,False,True,False,False,Race Condition,CWE-362,"The function xfs_bmap_extents_to_btree involves operations on shared resources without explicit synchronization mechanisms, which can lead to race conditions. The function manipulates inode structures and btree cursors, which are shared resources in a filesystem context. The absence of locks or atomic operations around these manipulations suggests a potential for race conditions, especially in a concurrent environment.",HIGH,Implement mutex locks around critical sections where shared resources are accessed and manipulated to prevent race conditions.,"['The function performs multiple operations on shared resources such as inode forks and btree cursors without explicit locking mechanisms.', ""The function modifies the inode's format and flags, which are critical operations that should be protected against concurrent access."", 'The similarity to CVE-2022-1048, which involves inadequate synchronization, suggests a potential for similar issues in this code.']","['The function uses assertions (ASSERT) to check preconditions, which can help catch some errors during development.', 'The function appears to follow a structured approach to resource allocation and deallocation, which can mitigate some risks of resource mismanagement.']",['CVE-2022-1048: Inadequate synchronization mechanisms in shared resource access during concurrent operations.'],"['The analysis is based on the provided code snippet and may not account for synchronization mechanisms implemented elsewhere in the codebase.', 'The absence of explicit locking in this function does not necessarily imply a vulnerability if higher-level synchronization is enforced.']",0.9191362314260021,0.9254926245103787,15.13726282119751,10,10,"STATIC int					/* error */
+xfs_bmap_extents_to_btree(
+	xfs_trans_t		*tp,		/* transaction pointer */
+	xfs_inode_t		*ip,		/* incore inode pointer */
+	xfs_fsblock_t		*firstblock,	/* first-block-allocated */
+	struct xfs_defer_ops	*dfops,		/* blocks freed in xaction */
+	xfs_btree_cur_t		**curp,		/* cursor returned to caller */
+	int			wasdel,		/* converting a delayed alloc */
+	int			*logflagsp,	/* inode logging flags */
+	int			whichfork)	/* data or attr fork */
+{
+	struct xfs_btree_block	*ablock;	/* al..."
+355,False,0,True,0.75,NEUTRAL,False,True,False,False,Improper Input Validation,CWE-119,"The function `attr_punch_hole` in the provided code appears to have potential vulnerabilities related to improper input validation and boundary checking. Specifically, the code does not adequately check the alignment of the `vbo` and `bytes` parameters against the expected cluster size, which could lead to improper memory operations. The function attempts to zero out a range of data without ensuring that the range is properly aligned, which could lead to undefined behavior or memory corruption.",MEDIUM,"Implement strict validation of `vbo` and `bytes` to ensure they are aligned with the cluster size and do not exceed allocated memory bounds. Consider returning an error if misalignment is detected, regardless of the `frame_size` parameter.","['The code checks if `vbo & mask` or `bytes & mask` are non-zero, indicating misalignment, but only returns an error if `frame_size` is NULL. This suggests that the function may proceed with misaligned operations if `frame_size` is not NULL.', 'The function does not perform comprehensive validation of the `vbo` and `bytes` parameters before performing memory operations, which could lead to out-of-bounds access if these values are not properly constrained.']","['The function includes some checks for alignment and size constraints, such as verifying that `vbo` is less than `alloc_size` and adjusting `bytes` to not exceed `alloc_size`.', 'The use of locks (`down_write` and `up_write`) around critical sections suggests an attempt to manage concurrent access, which is a positive security practice.']","['CVE-2018-7740: Improper handling of large offsets leading to integer overflow.', 'CVE-2017-9074: Lack of validation leading to out-of-bounds access.']","['The analysis is based on static code examination without runtime context or input data.', 'The similarity scores provided do not directly correlate to the specific code logic, requiring interpretation based on general patterns.']",0.9336200269598953,0.9312192827548487,16.289594173431396,10,10,"int attr_punch_hole(struct ntfs_inode *ni, u64 vbo, u64 bytes, u32 *frame_size)
+{
+	int err = 0;
+	struct runs_tree *run = &ni->file.run;
+	struct ntfs_sb_info *sbi = ni->mi.sbi;
+	struct ATTRIB *attr = NULL, *attr_b;
+	struct ATTR_LIST_ENTRY *le, *le_b;
+	struct mft_inode *mi, *mi_b;
+	CLST svcn, evcn1, vcn, len, end, alen, hole, next_svcn;
+	u64 total_size, alloc_size;
+	u32 mask;
+	__le16 a_flags;
+	struct runs_tree run2;
+
+	if (!bytes)
+		return 0;
+
+	le_b = NULL;
+	attr_b = ni_find_attr(ni, NULL, &le_b, A..."
+911,False,0,True,0.8,NEUTRAL,False,True,False,False,Race Condition,CWE-362,"The target code involves operations on shared resources (performance event groups) with potential for race conditions due to improper lock management. The code uses a mutex to protect access to shared resources, but the use of a goto statement for error handling can lead to inconsistent lock states. This pattern is similar to known vulnerabilities where improper lock management leads to race conditions.",MEDIUM,"Ensure that locks are consistently acquired and released, and avoid using goto statements for error handling that can lead to inconsistent lock states. Consider using structured error handling to maintain lock integrity.","['The code uses a mutex lock (mutex_lock(&leader->child_mutex)) but employs a goto statement for error handling, which can lead to inconsistent lock states.', 'The function involves iterating over a list of child events, which is a shared resource, indicating potential for race conditions if not properly synchronized.', 'Similarity with CVE-2016-6786, which involves improper management of locks during operations involving shared resources.']","['The code does acquire a mutex lock before accessing shared resources, which is a positive indication of attempting to manage concurrency.', 'The presence of lockdep_assert_held(&ctx->mutex) suggests an attempt to ensure the mutex is held, although this is not directly in the provided code.']","['CVE-2016-6786: Improper management of locks during operations involving shared resources.', 'CVE-2014-4652: Concurrency in accessing shared data without synchronization mechanisms.']","['The analysis is based on the provided code snippet and may not account for the full context of the codebase.', 'The similarity scores provided do not guarantee the presence of a vulnerability but indicate potential patterns to investigate further.']",0.7,0.7,13.52054500579834,10,10,"static int perf_read_group(struct perf_event *event,
+				   u64 read_format, char __user *buf)
+{
+	struct perf_event *leader = event->group_leader, *child;
+	struct perf_event_context *ctx = leader->ctx;
+	int ret;
+	u64 *values;
+
+	lockdep_assert_held(&ctx->mutex);
+
+	values = kzalloc(event->read_size, GFP_KERNEL);
+	if (!values)
+		return -ENOMEM;
+
+	values[0] = 1 + leader->nr_siblings;
+
+	mutex_lock(&leader->child_mutex);
+
+	ret = __perf_read_group_add(leader, read_format, values);
+	if (ret)
+		goto unlo..."
+1042,False,1,False,0.8,NEUTRAL,False,False,False,True,,,"The target code performs a simple operation of retrieving a device structure and passing it to another function. There is no direct evidence of vulnerability such as buffer overflows, memory leaks, or improper resource management. The function does not perform any complex operations that could lead to typical vulnerabilities like race conditions or use-after-free errors.",LOW,,"['The function casts a pointer and calls another function, which could potentially lead to issues if the cast is incorrect or if the called function is vulnerable. However, there is no direct evidence of such issues in the provided code.']","['The function is straightforward and does not perform any operations that typically lead to vulnerabilities, such as memory allocation, copying data to user space, or handling complex data structures.', 'There is no evidence of missing input validation or error handling in the context of this function, as it simply delegates the operation to another function.']",['The function structure is similar to common kernel code patterns where device structures are accessed and operations are delegated to other functions.'],"['The analysis is limited to the provided code snippet and does not include the implementation of `aac_compat_do_ioctl`, which could contain vulnerabilities.', 'The context of how this function is used within the larger codebase is not provided, which could affect the overall security assessment.']",0.6844929322081776,0.6867924291800768,13.741198778152466,10,10,"static int aac_compat_ioctl(struct scsi_device *sdev, int cmd, void __user *arg)
+{
+	struct aac_dev *dev = (struct aac_dev *)sdev->host->hostdata;
+	return aac_compat_do_ioctl(dev, cmd, (unsigned long)arg);
+}"
+1164,False,1,False,0.8,NEUTRAL,False,False,False,True,,,"The code in question is a function that handles socket options in a structured manner, with checks for user input validation and appropriate handling of different socket options. The function includes checks for negative lengths, uses `copy_to_user` to safely transfer data to user space, and handles errors appropriately. The evidence provided for vulnerabilities does not directly apply to this code, as the issues described (such as improper locking, use-after-free, and buffer overflows) are not evident in the current implementation.",LOW,,"['The function uses `get_user` and `put_user` to safely interact with user space data.', 'There is a check for negative lengths, which prevents potential buffer overflow issues.', 'The function uses `copy_to_user` to safely copy data to user space, which is a standard practice to prevent buffer overflows.']","['The function does not directly manipulate memory in a way that would lead to use-after-free or race conditions.', 'There are no operations that suggest improper locking or concurrent access issues.']","['The function structure is similar to other kernel functions that handle socket options, with appropriate checks and balances.']","['The analysis is based on the provided code snippet and does not account for external factors or interactions with other parts of the system.', 'The retrieval context provided similar patterns but did not directly correlate with the specific code structure and logic.']",0.7,0.7,11.920521974563599,10,10,"int sock_getsockopt(struct socket *sock, int level, int optname,
+		    char __user *optval, int __user *optlen)
+{
+	struct sock *sk = sock->sk;
+
+	union {
+		int val;
+		struct linger ling;
+		struct timeval tm;
+	} v;
+
+	int lv = sizeof(int);
+	int len;
+
+	if (get_user(len, optlen))
+		return -EFAULT;
+	if (len < 0)
+		return -EINVAL;
+
+	memset(&v, 0, sizeof(v));
+
+	switch (optname) {
+	case SO_DEBUG:
+		v.val = sock_flag(sk, SOCK_DBG);
+		break;
+
+	case SO_DONTROUTE:
+		v.val = sock_flag(sk, SOCK_LOCALROUTE);
+		..."
