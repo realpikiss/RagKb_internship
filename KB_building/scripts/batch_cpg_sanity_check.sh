@@ -15,6 +15,14 @@ if [[ $# -lt 1 ]]; then
     exit 1
 fi
 
+# Resolve project root for consistent paths
+if root_dir="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  PROJECT_ROOT="$root_dir"
+else
+  script_dir_init="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+  PROJECT_ROOT="$(cd "$script_dir_init/../.." && pwd -P)"
+fi
+
 CPG_DIR="$1"
 OUTPUT_REPORT="$2"
 
@@ -31,6 +39,7 @@ if ! command -v jq &> /dev/null; then
 fi
 
 echo "=== Batch CPG Sanity Check ==="
+echo "Project root: $PROJECT_ROOT"
 echo "Directory: $CPG_DIR"
 echo "Started: $(date)"
 echo ""
@@ -47,7 +56,7 @@ invalid_files=0
 declare -a detailed_results=()
 
 # Find all JSON/GraphSON files
-while IFS= read -r -d '' cpg_file; do
+while IFS= read -r cpg_file; do
     ((total_files++))
     filename=$(basename "$cpg_file")
     
@@ -56,27 +65,47 @@ while IFS= read -r -d '' cpg_file; do
         echo "Processed $total_files files..."
     fi
     
-    # Extract basic metrics using jq
-    vertex_count=$(jq '.["@value"].vertices | length' "$cpg_file" 2>/dev/null)
-    edge_count=$(jq '.["@value"].edges | length' "$cpg_file" 2>/dev/null)
+    # Extract basic metrics using jq - GraphSON v3 format
+    vertex_count=$(jq -r '."@value".vertices | length' "$cpg_file" 2>/dev/null)
+    edge_count=$(jq -r '."@value".edges | length' "$cpg_file" 2>/dev/null)
+    
+    # Fallback to direct structure if @value wrapper not found
+    if [[ -z "$vertex_count" || "$vertex_count" == "null" ]]; then
+        vertex_count=$(jq -r '.vertices | length' "$cpg_file" 2>/dev/null)
+        edge_count=$(jq -r '.edges | length' "$cpg_file" 2>/dev/null)
+    fi
     
     if [[ -z "$vertex_count" || "$vertex_count" == "null" ]]; then
         ((invalid_files++))
         quality="INVALID"
         is_flat="N/A"
     else
-        # Count semantic nodes
-        unknown_count=$(jq -r '.["@value"].vertices[].label' "$cpg_file" 2>/dev/null | grep -c '^UNKNOWN$' || echo "0")
-        call_count=$(jq -r '.["@value"].vertices[].label' "$cpg_file" 2>/dev/null | grep -c '^CALL$' || echo "0")
-        identifier_count=$(jq -r '.["@value"].vertices[].label' "$cpg_file" 2>/dev/null | grep -c '^IDENTIFIER$' || echo "0")
-        method_count=$(jq -r '.["@value"].vertices[].label' "$cpg_file" 2>/dev/null | grep -c '^METHOD$' || echo "0")
-        control_count=$(jq -r '.["@value"].vertices[].label' "$cpg_file" 2>/dev/null | grep -c '^CONTROL_STRUCTURE$' || echo "0")
+        # Count semantic nodes - GraphSON v3 format
+        # Try @value wrapper first, fallback to direct structure
+        labels_output=$(jq -r '."@value".vertices[].label' "$cpg_file" 2>/dev/null)
+        if [[ -z "$labels_output" || "$labels_output" == "null" ]]; then
+            labels_output=$(jq -r '.vertices[].label' "$cpg_file" 2>/dev/null)
+        fi
+        
+        unknown_count=$(echo "$labels_output" | grep -c '^UNKNOWN$' 2>/dev/null || echo "0")
+        call_count=$(echo "$labels_output" | grep -c '^CALL$' 2>/dev/null || echo "0")
+        identifier_count=$(echo "$labels_output" | grep -c '^IDENTIFIER$' 2>/dev/null || echo "0")
+        method_count=$(echo "$labels_output" | grep -c '^METHOD$' 2>/dev/null || echo "0")
+        control_count=$(echo "$labels_output" | grep -c '^CONTROL_STRUCTURE$' 2>/dev/null || echo "0")
+        
+        # Clean up variables to remove any whitespace/newlines
+        unknown_count=$(echo "$unknown_count" | tr -d '\n\r ')
+        call_count=$(echo "$call_count" | tr -d '\n\r ')
+        identifier_count=$(echo "$identifier_count" | tr -d '\n\r ')
+        method_count=$(echo "$method_count" | tr -d '\n\r ')
+        control_count=$(echo "$control_count" | tr -d '\n\r ')
         
         semantic_nodes=$((call_count + identifier_count + method_count + control_count))
         
         # Calculate unknown ratio
         if [[ $vertex_count -gt 0 ]]; then
             unknown_ratio=$(echo "scale=3; $unknown_count / $vertex_count" | bc 2>/dev/null || echo "0")
+            unknown_ratio=$(echo "$unknown_ratio" | tr -d '\n\r ')
         else
             unknown_ratio="0"
         fi
@@ -129,7 +158,7 @@ while IFS= read -r -d '' cpg_file; do
         }")
     fi
     
-done < <(find "$CPG_DIR" -name "*.json" -o -name "*.graphson" -print0)
+done <<< "$(find "$CPG_DIR" -name "*.json" -o -name "*.graphson")"
 
 echo ""
 echo "=== Summary Report ==="

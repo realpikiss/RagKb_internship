@@ -17,8 +17,17 @@ if [[ $# -ne 2 ]]; then
     exit 1
 fi
 
+# Resolve project root: prefer git top-level, fallback to two levels up from this script
+if root_dir="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  project_dir="$root_dir"
+else
+  script_dir_init="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+  project_dir="$(cd "$script_dir_init/../.." && pwd -P)"
+fi
+
 CODE_FILES_DIR="$1"
 CPG_OUTPUT_DIR="$2"
+LOG_DIR="$project_dir/logs"
 
 # --- Input Directory Validation ---
 # Check that the input directory exists and is a directory.
@@ -27,18 +36,19 @@ if [[ ! -d "$CODE_FILES_DIR" ]]; then
     exit 1
 fi
 
-# Create output directory if it doesn't exist.
-mkdir -p "$CPG_OUTPUT_DIR"
+# Create output and log directories if they don't exist.
+mkdir -p "$CPG_OUTPUT_DIR" "$LOG_DIR"
 
 # --- Environment Setup ---
 # Set Java memory options for Joern and define log file location.
 export JAVA_OPTIONS="-Xms1g -Xmx2g"
-LOG="$CPG_OUTPUT_DIR/extract.log"
-
+LOG="$LOG_DIR/extract.log"
 # --- Extraction Start Banner ---
 echo "=== FULL CPG EXTRACTION ==="
+echo "Project root: $project_dir"
 echo "Input: $CODE_FILES_DIR"
 echo "Output: $CPG_OUTPUT_DIR"
+echo "Logs: $LOG"
 echo "Started: $(date)"
 
 # --- CPG Extraction Function ---
@@ -53,14 +63,14 @@ extract_cpg() {
     # Create a temporary directory for intermediate files.
     local tmpdir=$(mktemp -d)
     local cpg_file="$tmpdir/code.cpg.bin"
-    local export_dir="$tmpdir/export"
+    local export_dir="$tmpdir/export" 
     local stub_file="$tmpdir/kernel_stub.h"
     local wrapped_file="$tmpdir/wrapped.c"
     local preprocessed_file="$tmpdir/preprocessed.c"
     
-    # Copy kernel stub to temp directory
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    cp "$script_dir/kernel_stub.h" "$stub_file"
+    # Copy kernel stub to temp directory (resolve from KB_building/config relative to scripts/)
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+    cp "$script_dir/../config/kernel_stub.h" "$stub_file"
     
     # Step 1: Wrap source file with stub include
     {

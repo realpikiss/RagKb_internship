@@ -11,10 +11,18 @@
 
 set -e  # Exit on any error
 
-# Default paths
-DEFAULT_CODE_DIR="data/tmp/temp_code_files"
-DEFAULT_CPG_DIR="data/processed/cpgs"
-DEFAULT_REPORT_DIR="data/processed/reports"
+# Resolve project root: prefer git top-level, fallback to two levels up from this script
+if root_dir="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  PROJECT_ROOT="$root_dir"
+else
+  script_dir_init="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+  PROJECT_ROOT="$(cd "$script_dir_init/../.." && pwd -P)"
+fi
+
+# Default paths (relative to project root)
+DEFAULT_CODE_DIR="$PROJECT_ROOT/data/tmp/temp_code_files"
+DEFAULT_CPG_DIR="$PROJECT_ROOT/data/tmp/cpgs"
+DEFAULT_REPORT_DIR="$PROJECT_ROOT/results/cpg_extraction"
 
 # Parse arguments
 CODE_DIR="${1:-$DEFAULT_CODE_DIR}"
@@ -22,11 +30,12 @@ CPG_DIR="${2:-$DEFAULT_CPG_DIR}"
 REPORT_DIR="${3:-$DEFAULT_REPORT_DIR}"
 
 # Script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 echo "======================================"
 echo "🚀 CPG Extraction Pipeline"
 echo "======================================"
+echo "Project root: $PROJECT_ROOT"
 echo "Code directory: $CODE_DIR"
 echo "CPG directory: $CPG_DIR"
 echo "Report directory: $REPORT_DIR"
@@ -50,8 +59,8 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
-if [[ ! -f "$SCRIPT_DIR/kernel_stub.h" ]]; then
-    echo "❌ Error: kernel_stub.h not found in scripts directory"
+if [[ ! -f "$SCRIPT_DIR/../config/kernel_stub.h" ]]; then
+    echo "❌ Error: kernel_stub.h not found in KB_building/config directory"
     exit 1
 fi
 
