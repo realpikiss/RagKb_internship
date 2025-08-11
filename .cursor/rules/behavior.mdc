@@ -1,7 +1,0 @@
----
-description: Remember that I am a bachelor’s degree student: keep your code simple, clear, and easy to understand.  
-Focus only on the essential parts of my request: do exactly what I ask, without adding any “fallbacks” or extra options that unnecessarily complicate the code.  
-If you add a choice or a library, explain it briefly in one sentence and avoid any unnecessary complexity.
-globs:
-alwaysApply: true
----
