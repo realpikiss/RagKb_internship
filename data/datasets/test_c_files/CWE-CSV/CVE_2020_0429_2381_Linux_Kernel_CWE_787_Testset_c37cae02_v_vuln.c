@@ -1,0 +1,52 @@
+void l2tp_tunnel_closeall(struct l2tp_tunnel *tunnel)
+{
+	int hash;
+	struct hlist_node *walk;
+	struct hlist_node *tmp;
+	struct l2tp_session *session;
+
+	BUG_ON(tunnel == NULL);
+
+	l2tp_info(tunnel, L2TP_MSG_CONTROL, "%s: closing all sessions...\n",
+		  tunnel->name);
+
+	write_lock_bh(&tunnel->hlist_lock);
+	tunnel->acpt_newsess = false;
+	for (hash = 0; hash < L2TP_HASH_SIZE; hash++) {
+again:
+		hlist_for_each_safe(walk, tmp, &tunnel->session_hlist[hash]) {
+			session = hlist_entry(walk, struct l2tp_session, hlist);
+
+			l2tp_info(session, L2TP_MSG_CONTROL,
+				  "%s: closing session\n", session->name);
+
+			hlist_del_init(&session->hlist);
+
+			if (session->ref != NULL)
+				(*session->ref)(session);
+
+			write_unlock_bh(&tunnel->hlist_lock);
+
+			__l2tp_session_unhash(session);
+			l2tp_session_queue_purge(session);
+
+			if (session->session_close != NULL)
+				(*session->session_close)(session);
+
+			if (session->deref != NULL)
+				(*session->deref)(session);
+
+			l2tp_session_dec_refcount(session);
+
+			write_lock_bh(&tunnel->hlist_lock);
+
+			/* Now restart from the beginning of this hash
+			 * chain.  We always remove a session from the
+			 * list so we are guaranteed to make forward
+			 * progress.
+			 */
+			goto again;
+		}
+	}
+	write_unlock_bh(&tunnel->hlist_lock);
+}

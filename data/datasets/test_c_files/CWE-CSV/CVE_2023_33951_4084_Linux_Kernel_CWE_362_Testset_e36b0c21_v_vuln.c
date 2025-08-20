@@ -1,0 +1,52 @@
+static struct drm_framebuffer *vmw_kms_fb_create(struct drm_device *dev,
+						 struct drm_file *file_priv,
+						 const struct drm_mode_fb_cmd2 *mode_cmd)
+{
+	struct vmw_private *dev_priv = vmw_priv(dev);
+	struct vmw_framebuffer *vfb = NULL;
+	struct vmw_surface *surface = NULL;
+	struct vmw_bo *bo = NULL;
+	int ret;
+
+	/* returns either a bo or surface */
+	ret = vmw_user_lookup_handle(dev_priv, file_priv,
+				     mode_cmd->handles[0],
+				     &surface, &bo);
+	if (ret) {
+		DRM_ERROR("Invalid buffer object handle %u (0x%x).\n",
+			  mode_cmd->handles[0], mode_cmd->handles[0]);
+		goto err_out;
+	}
+
+
+	if (!bo &&
+	    !vmw_kms_srf_ok(dev_priv, mode_cmd->width, mode_cmd->height)) {
+		DRM_ERROR("Surface size cannot exceed %dx%d\n",
+			dev_priv->texture_max_width,
+			dev_priv->texture_max_height);
+		goto err_out;
+	}
+
+
+	vfb = vmw_kms_new_framebuffer(dev_priv, bo, surface,
+				      !(dev_priv->capabilities & SVGA_CAP_3D),
+				      mode_cmd);
+	if (IS_ERR(vfb)) {
+		ret = PTR_ERR(vfb);
+		goto err_out;
+	}
+
+err_out:
+	/* vmw_user_lookup_handle takes one ref so does new_fb */
+	if (bo)
+		vmw_bo_unreference(&bo);
+	if (surface)
+		vmw_surface_unreference(&surface);
+
+	if (ret) {
+		DRM_ERROR("failed to create vmw_framebuffer: %i\n", ret);
+		return ERR_PTR(ret);
+	}
+
+	return &vfb->base;
+}

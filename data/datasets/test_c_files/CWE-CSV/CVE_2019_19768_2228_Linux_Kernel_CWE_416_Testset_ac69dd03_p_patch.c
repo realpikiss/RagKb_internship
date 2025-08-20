@@ -1,0 +1,17 @@
+static void blk_add_trace_getrq(void *ignore,
+				struct request_queue *q,
+				struct bio *bio, int rw)
+{
+	if (bio)
+		blk_add_trace_bio(q, bio, BLK_TA_GETRQ, 0);
+	else {
+		struct blk_trace *bt;
+
+		rcu_read_lock();
+		bt = rcu_dereference(q->blk_trace);
+		if (bt)
+			__blk_add_trace(bt, 0, 0, rw, 0, BLK_TA_GETRQ, 0, 0,
+					NULL, 0);
+		rcu_read_unlock();
+	}
+}

@@ -1,0 +1,38 @@
+static int stk7070p_frontend_attach(struct dvb_usb_adapter *adap)
+{
+	struct usb_device_descriptor *p = &adap->dev->udev->descriptor;
+	struct dib0700_adapter_state *state = adap->priv;
+
+	if (!dvb_attach(dib7000p_attach, &state->dib7000p_ops))
+		return -ENODEV;
+
+	if (p->idVendor  == cpu_to_le16(USB_VID_PINNACLE) &&
+	    p->idProduct == cpu_to_le16(USB_PID_PINNACLE_PCTV72E))
+		dib0700_set_gpio(adap->dev, GPIO6, GPIO_OUT, 0);
+	else
+		dib0700_set_gpio(adap->dev, GPIO6, GPIO_OUT, 1);
+	msleep(10);
+	dib0700_set_gpio(adap->dev, GPIO9, GPIO_OUT, 1);
+	dib0700_set_gpio(adap->dev, GPIO4, GPIO_OUT, 1);
+	dib0700_set_gpio(adap->dev, GPIO7, GPIO_OUT, 1);
+	dib0700_set_gpio(adap->dev, GPIO10, GPIO_OUT, 0);
+
+	dib0700_ctrl_clock(adap->dev, 72, 1);
+
+	msleep(10);
+	dib0700_set_gpio(adap->dev, GPIO10, GPIO_OUT, 1);
+	msleep(10);
+	dib0700_set_gpio(adap->dev, GPIO0, GPIO_OUT, 1);
+
+	if (state->dib7000p_ops.i2c_enumeration(&adap->dev->i2c_adap, 1, 18,
+				     &dib7070p_dib7000p_config) != 0) {
+		err("%s: state->dib7000p_ops.i2c_enumeration failed.  Cannot continue\n",
+		    __func__);
+		dvb_detach(&state->dib7000p_ops);
+		return -ENODEV;
+	}
+
+	adap->fe_adap[0].fe = state->dib7000p_ops.init(&adap->dev->i2c_adap, 0x80,
+		&dib7070p_dib7000p_config);
+	return adap->fe_adap[0].fe == NULL ? -ENODEV : 0;
+}

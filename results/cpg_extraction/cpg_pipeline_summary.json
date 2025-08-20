@@ -1,0 +1,17 @@
+{
+    "timestamp": "2025-08-16T19:05:40Z",
+    "pipeline_version": "1.0",
+    "input_directory": "/Users/vernetemmanueladjobi/Documents/RessourcesStages/Projets/VulRAG-Hybrid-System/data/tmp/temp_code_files",
+    "cpg_directory": "/Users/vernetemmanueladjobi/Documents/RessourcesStages/Projets/VulRAG-Hybrid-System/data/tmp/cpgs",
+    "steps_completed": [
+        "vulnerable_cpg_extraction"
+    ],
+    "reports": {
+        "pipeline_summary": "/Users/vernetemmanueladjobi/Documents/RessourcesStages/Projets/VulRAG-Hybrid-System/results/cpg_extraction/cpg_pipeline_summary.json"
+    },
+    "next_steps": [
+        "Review vulnerable CPG quality statistics",
+        "Run KB construction with vulnerable code analysis",
+        "Analyze vulnerable code patterns for feature extraction"
+    ]
+}

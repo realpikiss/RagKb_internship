@@ -1,0 +1,60 @@
+static void io_worker_handle_work(struct io_worker *worker)
+	__releases(wqe->lock)
+{
+	struct io_wqe *wqe = worker->wqe;
+	struct io_wq *wq = wqe->wq;
+
+	do {
+		struct io_wq_work *work;
+get_next:
+		/*
+		 * If we got some work, mark us as busy. If we didn't, but
+		 * the list isn't empty, it means we stalled on hashed work.
+		 * Mark us stalled so we don't keep looking for work when we
+		 * can't make progress, any work completion or insertion will
+		 * clear the stalled flag.
+		 */
+		work = io_get_next_work(wqe);
+		if (work)
+			__io_worker_busy(wqe, worker, work);
+		else if (!wq_list_empty(&wqe->work_list))
+			wqe->flags |= IO_WQE_FLAG_STALLED;
+
+		raw_spin_unlock_irq(&wqe->lock);
+		if (!work)
+			break;
+		io_assign_current_work(worker, work);
+
+		/* handle a whole dependent link */
+		do {
+			struct io_wq_work *next_hashed, *linked;
+			unsigned int hash = io_get_work_hash(work);
+
+			next_hashed = wq_next_work(work);
+			wq->do_work(work);
+			io_assign_current_work(worker, NULL);
+
+			linked = wq->free_work(work);
+			work = next_hashed;
+			if (!work && linked && !io_wq_is_hashed(linked)) {
+				work = linked;
+				linked = NULL;
+			}
+			io_assign_current_work(worker, work);
+			if (linked)
+				io_wqe_enqueue(wqe, linked);
+
+			if (hash != -1U && !next_hashed) {
+				raw_spin_lock_irq(&wqe->lock);
+				wqe->hash_map &= ~BIT_ULL(hash);
+				wqe->flags &= ~IO_WQE_FLAG_STALLED;
+				/* skip unnecessary unlock-lock wqe->lock */
+				if (!work)
+					goto get_next;
+				raw_spin_unlock_irq(&wqe->lock);
+			}
+		} while (work);
+
+		raw_spin_lock_irq(&wqe->lock);
+	} while (1);
+}

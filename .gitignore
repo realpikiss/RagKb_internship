@@ -1,5 +1,2 @@
-.data
-.venv
-.cursor
-.*
-*.json
+data/tmp/vuln_cpgs
+data/datasets/test_cpg_files

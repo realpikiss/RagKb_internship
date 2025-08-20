@@ -1,0 +1,100 @@
+static int bigben_probe(struct hid_device *hid,
+	const struct hid_device_id *id)
+{
+	struct bigben_device *bigben;
+	struct hid_input *hidinput;
+	struct list_head *report_list;
+	struct led_classdev *led;
+	char *name;
+	size_t name_sz;
+	int n, error;
+
+	bigben = devm_kzalloc(&hid->dev, sizeof(*bigben), GFP_KERNEL);
+	if (!bigben)
+		return -ENOMEM;
+	hid_set_drvdata(hid, bigben);
+	bigben->hid = hid;
+	bigben->removed = false;
+
+	error = hid_parse(hid);
+	if (error) {
+		hid_err(hid, "parse failed\n");
+		return error;
+	}
+
+	error = hid_hw_start(hid, HID_CONNECT_DEFAULT & ~HID_CONNECT_FF);
+	if (error) {
+		hid_err(hid, "hw start failed\n");
+		return error;
+	}
+
+	report_list = &hid->report_enum[HID_OUTPUT_REPORT].report_list;
+	if (list_empty(report_list)) {
+		hid_err(hid, "no output report found\n");
+		error = -ENODEV;
+		goto error_hw_stop;
+	}
+	bigben->report = list_entry(report_list->next,
+		struct hid_report, list);
+
+	if (list_empty(&hid->inputs)) {
+		hid_err(hid, "no inputs found\n");
+		error = -ENODEV;
+		goto error_hw_stop;
+	}
+
+	hidinput = list_first_entry(&hid->inputs, struct hid_input, list);
+	set_bit(FF_RUMBLE, hidinput->input->ffbit);
+
+	INIT_WORK(&bigben->worker, bigben_worker);
+	spin_lock_init(&bigben->lock);
+
+	error = input_ff_create_memless(hidinput->input, NULL,
+		hid_bigben_play_effect);
+	if (error)
+		goto error_hw_stop;
+
+	name_sz = strlen(dev_name(&hid->dev)) + strlen(":red:bigben#") + 1;
+
+	for (n = 0; n < NUM_LEDS; n++) {
+		led = devm_kzalloc(
+			&hid->dev,
+			sizeof(struct led_classdev) + name_sz,
+			GFP_KERNEL
+		);
+		if (!led) {
+			error = -ENOMEM;
+			goto error_hw_stop;
+		}
+		name = (void *)(&led[1]);
+		snprintf(name, name_sz,
+			"%s:red:bigben%d",
+			dev_name(&hid->dev), n + 1
+		);
+		led->name = name;
+		led->brightness = (n == 0) ? LED_ON : LED_OFF;
+		led->max_brightness = 1;
+		led->brightness_get = bigben_get_led;
+		led->brightness_set = bigben_set_led;
+		bigben->leds[n] = led;
+		error = devm_led_classdev_register(&hid->dev, led);
+		if (error)
+			goto error_hw_stop;
+	}
+
+	/* initial state: LED1 is on, no rumble effect */
+	bigben->led_state = BIT(0);
+	bigben->right_motor_on = 0;
+	bigben->left_motor_force = 0;
+	bigben->work_led = true;
+	bigben->work_ff = true;
+	schedule_work(&bigben->worker);
+
+	hid_info(hid, "LED and force feedback support for BigBen gamepad\n");
+
+	return 0;
+
+error_hw_stop:
+	hid_hw_stop(hid);
+	return error;
+}

@@ -1,0 +1,9 @@
+void saa7134_video_fini(struct saa7134_dev *dev)
+{
+	/* free stuff */
+	saa7134_pgtable_free(dev->pci, &dev->video_q.pt);
+	saa7134_pgtable_free(dev->pci, &dev->vbi_q.pt);
+	v4l2_ctrl_handler_free(&dev->ctrl_handler);
+	if (card_has_radio(dev))
+		v4l2_ctrl_handler_free(&dev->radio_ctrl_handler);
+}

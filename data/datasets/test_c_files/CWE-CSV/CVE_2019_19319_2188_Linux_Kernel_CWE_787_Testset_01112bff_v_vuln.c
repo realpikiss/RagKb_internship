@@ -1,0 +1,39 @@
+int ext4_setup_system_zone(struct super_block *sb)
+{
+	ext4_group_t ngroups = ext4_get_groups_count(sb);
+	struct ext4_sb_info *sbi = EXT4_SB(sb);
+	struct ext4_group_desc *gdp;
+	ext4_group_t i;
+	int flex_size = ext4_flex_bg_size(sbi);
+	int ret;
+
+	if (!test_opt(sb, BLOCK_VALIDITY)) {
+		if (sbi->system_blks.rb_node)
+			ext4_release_system_zone(sb);
+		return 0;
+	}
+	if (sbi->system_blks.rb_node)
+		return 0;
+
+	for (i=0; i < ngroups; i++) {
+		if (ext4_bg_has_super(sb, i) &&
+		    ((i < 5) || ((i % flex_size) == 0)))
+			add_system_zone(sbi, ext4_group_first_block_no(sb, i),
+					ext4_bg_num_gdb(sb, i) + 1);
+		gdp = ext4_get_group_desc(sb, i, NULL);
+		ret = add_system_zone(sbi, ext4_block_bitmap(sb, gdp), 1);
+		if (ret)
+			return ret;
+		ret = add_system_zone(sbi, ext4_inode_bitmap(sb, gdp), 1);
+		if (ret)
+			return ret;
+		ret = add_system_zone(sbi, ext4_inode_table(sb, gdp),
+				sbi->s_itb_per_group);
+		if (ret)
+			return ret;
+	}
+
+	if (test_opt(sb, DEBUG))
+		debug_print_tree(sbi);
+	return 0;
+}

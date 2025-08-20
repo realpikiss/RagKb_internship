@@ -1,0 +1,65 @@
+static void xillyusb_disconnect(struct usb_interface *interface)
+{
+	struct xillyusb_dev *xdev = usb_get_intfdata(interface);
+	struct xillyusb_endpoint *msg_ep = xdev->msg_ep;
+	struct xillyfifo *fifo = &msg_ep->fifo;
+	int rc;
+	int i;
+
+	xillybus_cleanup_chrdev(xdev, &interface->dev);
+
+	/*
+	 * Try to send OPCODE_QUIESCE, which will fail silently if the device
+	 * was disconnected, but makes sense on module unload.
+	 */
+
+	msg_ep->wake_on_drain = true;
+	xillyusb_send_opcode(xdev, ~0, OPCODE_QUIESCE, 0);
+
+	/*
+	 * If the device has been disconnected, sending the opcode causes
+	 * a global device error with xdev->error, if such error didn't
+	 * occur earlier. Hence timing out means that the USB link is fine,
+	 * but somehow the message wasn't sent. Should never happen.
+	 */
+
+	rc = wait_event_interruptible_timeout(fifo->waitq,
+					      msg_ep->drained || xdev->error,
+					      XILLY_RESPONSE_TIMEOUT);
+
+	if (!rc)
+		dev_err(&interface->dev,
+			"Weird timeout condition on sending quiesce request.\n");
+
+	report_io_error(xdev, -ENODEV); /* Discourage further activity */
+
+	/*
+	 * This device driver is declared with soft_unbind set, or else
+	 * sending OPCODE_QUIESCE above would always fail. The price is
+	 * that the USB framework didn't kill outstanding URBs, so it has
+	 * to be done explicitly before returning from this call.
+	 */
+
+	for (i = 0; i < xdev->num_channels; i++) {
+		struct xillyusb_channel *chan = &xdev->channels[i];
+
+		/*
+		 * Lock taken to prevent chan->out_ep from changing. It also
+		 * ensures xillyusb_open() and xillyusb_flush() don't access
+		 * xdev->dev after being nullified below.
+		 */
+		mutex_lock(&chan->lock);
+		if (chan->out_ep)
+			endpoint_quiesce(chan->out_ep);
+		mutex_unlock(&chan->lock);
+	}
+
+	endpoint_quiesce(xdev->in_ep);
+	endpoint_quiesce(xdev->msg_ep);
+
+	usb_set_intfdata(interface, NULL);
+
+	xdev->dev = NULL;
+
+	kref_put(&xdev->kref, cleanup_dev);
+}
